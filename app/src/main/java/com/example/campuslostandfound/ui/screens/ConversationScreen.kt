@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -22,6 +24,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,33 +42,84 @@ import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
 import com.example.campuslostandfound.ui.theme.Dimens
 
 /**
- * Conversation — simple message thread between the poster and the responder.
+ * Conversation — stateful entry point. Owns the message list and the text being typed,
+ * and passes them to the stateless [ConversationContent].
+ *
+ * State:
+ *  - messages → observable list; adding to it recomposes the LazyColumn
+ *  - draft    → text in the input field; also decides whether Send is enabled
+ */
+@Composable
+fun ConversationScreen(
+    initialMessages: List<ChatMessage>,
+    modifier: Modifier = Modifier,
+) {
+    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(initialMessages) } }
+    var draft by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+
+    // Whenever a message is added, scroll so the newest one is visible.
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+    }
+
+    ConversationContent(
+        modifier = modifier,
+        messages = messages,
+        draft = draft,
+        listState = listState,
+        onDraftChange = { draft = it },
+        onSendClick = {
+            messages.add(ChatMessage(text = draft.trim(), isFromMe = true))
+            draft = ""
+        },
+    )
+}
+
+/**
+ * Conversation — stateless layout.
  *
  * Hierarchy:
  * Scaffold
  *  ├─ topBar: ScreenHeader("Conversation", back arrow)
- *  ├─ content: LazyColumn of MessageBubble
+ *  ├─ content: EmptyConversation  (when messages is empty)
+ *  │           LazyColumn of MessageBubble  (otherwise)
  *  └─ bottomBar: MessageInputBar (text field + Send)
  */
 @Composable
-fun ConversationScreen(
+fun ConversationContent(
     messages: List<ChatMessage>,
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    onSendClick: () -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     Scaffold(
         modifier = modifier,
         topBar = { ScreenHeader(title = "Conversation", showBackArrow = true) },
-        bottomBar = { MessageInputBar() },
+        bottomBar = {
+            MessageInputBar(
+                draft = draft,
+                onDraftChange = onDraftChange,
+                onSendClick = onSendClick,
+            )
+        },
     ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = Dimens.ScreenPadding),
-            verticalArrangement = Arrangement.spacedBy(Dimens.ScreenPadding),
-        ) {
-            items(messages) { message ->
-                MessageBubble(message = message)
+        if (messages.isEmpty()) {
+            EmptyConversation(modifier = Modifier.padding(innerPadding))
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                state = listState,
+                contentPadding = PaddingValues(horizontal = Dimens.ScreenPadding),
+                verticalArrangement = Arrangement.spacedBy(Dimens.ScreenPadding),
+            ) {
+                items(messages) { message ->
+                    MessageBubble(message = message)
+                }
             }
         }
     }
@@ -98,10 +157,33 @@ fun MessageBubble(
 }
 
 /**
- * Text field and Send button pinned to the bottom of the screen.
+ * Shown in place of the message list when no messages have been sent yet.
  */
 @Composable
-private fun MessageInputBar(modifier: Modifier = Modifier) {
+private fun EmptyConversation(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "No messages yet.\nSay hi to start the conversation.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.outline,
+        )
+    }
+}
+
+/**
+ * Text field and Send button pinned to the bottom of the screen.
+ * Send is only enabled while [draft] contains text.
+ */
+@Composable
+private fun MessageInputBar(
+    draft: String,
+    onDraftChange: (String) -> Unit,
+    onSendClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -111,8 +193,8 @@ private fun MessageInputBar(modifier: Modifier = Modifier) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedTextField(
-            value = "",
-            onValueChange = {},
+            value = draft,
+            onValueChange = onDraftChange,
             modifier = Modifier
                 .weight(1f)
                 .height(Dimens.FieldHeight),
@@ -122,14 +204,33 @@ private fun MessageInputBar(modifier: Modifier = Modifier) {
             shape = RoundedCornerShape(Dimens.CornerRadius),
         )
         Spacer(modifier = Modifier.width(Dimens.SpacingMedium))
-        GrayButton(text = "Send", modifier = Modifier.width(80.dp))
+        GrayButton(
+            text = "Send",
+            enabled = draft.isNotBlank(),
+            onClick = onSendClick,
+            modifier = Modifier.width(80.dp),
+        )
     }
 }
 
+// Interactive: use the preview's "Start Interactive Mode" button to type and send messages.
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun ConversationScreenPreview() {
     CampusLostAndFoundTheme {
-        ConversationScreen(messages = SampleData.conversation)
+        ConversationScreen(initialMessages = SampleData.conversation)
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Empty conversation")
+@Composable
+private fun ConversationEmptyPreview() {
+    CampusLostAndFoundTheme {
+        ConversationContent(
+            messages = emptyList(),
+            draft = "",
+            onDraftChange = {},
+            onSendClick = {},
+        )
     }
 }
