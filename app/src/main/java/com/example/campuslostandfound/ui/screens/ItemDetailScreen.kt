@@ -28,7 +28,7 @@ import com.example.campuslostandfound.data.ItemStatus
 import com.example.campuslostandfound.data.LostItem
 import com.example.campuslostandfound.data.SampleData
 import com.example.campuslostandfound.ui.components.GrayButton
-import com.example.campuslostandfound.ui.components.ImagePlaceholder
+import com.example.campuslostandfound.ui.components.ItemPhoto
 import com.example.campuslostandfound.ui.components.ScreenHeader
 import com.example.campuslostandfound.ui.components.StatusBadge
 import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
@@ -42,7 +42,7 @@ import com.example.campuslostandfound.ui.theme.Dimens
  * Scaffold
  *  ├─ topBar: ScreenHeader("Item Detail", back arrow, SaveButton)
  *  └─ content: Column (scrollable for long descriptions)
- *       ├─ ImagePlaceholder (large photo)
+ *       ├─ ItemPhoto (large photo)
  *       ├─ ItemTitleSection (name, badge, "saved" note when isSaved)
  *       ├─ ItemInfoSection (Location, Category, Posted, Description)
  *       └─ GrayButton("Message finder" / "Message owner")
@@ -77,7 +77,8 @@ fun ItemDetailScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Dimens.ScreenPadding),
         ) {
-            ImagePlaceholder(
+            ItemPhoto(
+                photoUri = item.photoUri,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(Dimens.DetailImageHeight),

@@ -18,6 +18,7 @@ data class LostItem(
     val status: ItemStatus,
     val postedAt: String,
     val description: String = "",
+    val photoUri: String? = null,
 ) : Serializable
 
 data class ChatMessage(

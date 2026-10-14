@@ -85,6 +85,7 @@ fun AppNavHost(modifier: Modifier = Modifier) {
                                 category = report.category,
                                 location = report.location,
                                 status = report.status,
+                                photoUri = report.photoUri,
                                 postedAt = "Today, " + SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date()),
                             ),
                         )

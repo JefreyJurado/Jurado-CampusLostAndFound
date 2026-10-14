@@ -1,6 +1,9 @@
 package com.example.campuslostandfound.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +39,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.campuslostandfound.data.ItemStatus
 import com.example.campuslostandfound.ui.components.DiscardReportDialog
 import com.example.campuslostandfound.ui.components.GrayButton
+import com.example.campuslostandfound.ui.components.ItemPhoto
 import com.example.campuslostandfound.ui.components.ScreenHeader
 import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
 import com.example.campuslostandfound.ui.theme.Dimens
@@ -50,6 +54,7 @@ data class ReportSubmission(
     val name: String,
     val category: String,
     val location: String,
+    val photoUri: String?,
 )
 
 /**
@@ -59,6 +64,7 @@ data class ReportSubmission(
  * State (rememberSaveable, so typing survives rotation):
  *  - selectedType      → which Lost / Found segment is highlighted
  *  - name / category / location → text in each field
+ *  - photoUri          → photo chosen with the system photo picker (optional)
  *  - showErrors        → set after a submit attempt with blank fields; outlines them red
  *  - showDiscardDialog → whether the "Discard this report?" dialog is visible
  *
@@ -75,12 +81,19 @@ fun ReportItemScreen(
     var name by rememberSaveable { mutableStateOf("") }
     var category by rememberSaveable { mutableStateOf("") }
     var location by rememberSaveable { mutableStateOf("") }
+    var photoUri by rememberSaveable { mutableStateOf<String?>(null) }
     var showErrors by rememberSaveable { mutableStateOf(false) }
     var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
 
     // Derived values — recalculated on every recomposition, so they never go out of sync.
-    val hasUnsavedChanges = name.isNotBlank() || category.isNotBlank() || location.isNotBlank()
+    val hasUnsavedChanges =
+        name.isNotBlank() || category.isNotBlank() || location.isNotBlank() || photoUri != null
     val isFormComplete = name.isNotBlank() && category.isNotBlank() && location.isNotBlank()
+
+    // The system photo picker needs no storage permission. A cancelled pick returns null and changes nothing.
+    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) photoUri = uri.toString()
+    }
 
     // Only intercept the system Back button when there is something to lose.
     BackHandler(enabled = hasUnsavedChanges) { showDiscardDialog = true }
@@ -91,11 +104,15 @@ fun ReportItemScreen(
         name = name,
         category = category,
         location = location,
+        photoUri = photoUri,
         showErrors = showErrors,
         onTypeSelect = { selectedType = it },
         onNameChange = { name = it },
         onCategoryChange = { category = it },
         onLocationChange = { location = it },
+        onPhotoClick = {
+            photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+        },
         onBackClick = {
             if (hasUnsavedChanges) showDiscardDialog = true else onNavigateBack()
         },
@@ -107,6 +124,7 @@ fun ReportItemScreen(
                         name = name.trim(),
                         category = category.trim(),
                         location = location.trim(),
+                        photoUri = photoUri,
                     ),
                 )
             } else {
@@ -137,7 +155,7 @@ fun ReportItemScreen(
  *  └─ content: Column (scrollable)
  *       ├─ ReportTypeToggle (Lost | Found)
  *       ├─ FormField × 3 (Name, Category, Location)
- *       ├─ PhotoPicker (dashed box)
+ *       ├─ PhotoPicker (dashed box, or the chosen photo)
  *       └─ GrayButton("Submit Report")
  */
 @Composable
@@ -146,11 +164,13 @@ fun ReportItemContent(
     name: String,
     category: String,
     location: String,
+    photoUri: String?,
     showErrors: Boolean,
     onTypeSelect: (ItemStatus) -> Unit,
     onNameChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
     onLocationChange: (String) -> Unit,
+    onPhotoClick: () -> Unit,
     onBackClick: () -> Unit,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -188,7 +208,11 @@ fun ReportItemContent(
                 onValueChange = onLocationChange,
                 isError = showErrors && location.isBlank(),
             )
-            PhotoPicker(modifier = Modifier.padding(top = Dimens.SpacingSmall))
+            PhotoPicker(
+                photoUri = photoUri,
+                onClick = onPhotoClick,
+                modifier = Modifier.padding(top = Dimens.SpacingSmall),
+            )
             GrayButton(
                 text = "Submit Report",
                 onClick = onSubmitClick,
@@ -273,16 +297,25 @@ fun FormField(
 }
 
 /**
- * Dashed drop-zone prompting the user to add an optional photo.
- * Photo selection needs device access, so it stays visual-only for now.
+ * Dashed drop-zone prompting the user to add an optional photo. Once a photo is chosen it fills
+ * the box; tapping again picks a different one.
  */
 @Composable
-fun PhotoPicker(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(Dimens.PhotoPickerHeight)
-            .drawBehind {
+fun PhotoPicker(
+    photoUri: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val boxModifier = modifier
+        .fillMaxWidth()
+        .height(Dimens.PhotoPickerHeight)
+        .clickable(onClickLabel = "Choose a photo", onClick = onClick)
+
+    if (photoUri != null) {
+        ItemPhoto(photoUri = photoUri, modifier = boxModifier)
+    } else {
+        Box(
+            modifier = boxModifier.drawBehind {
                 drawRoundRect(
                     color = OutlineGray,
                     style = Stroke(
@@ -292,13 +325,13 @@ fun PhotoPicker(modifier: Modifier = Modifier) {
                     cornerRadius = CornerRadius(2.dp.toPx()),
                 )
             },
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(text = "Tap to add a photo", style = MaterialTheme.typography.bodyMedium)
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = "Tap to add a photo", style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 
-// Interactive: use the preview's "Start Interactive Mode" button to type, toggle, and submit.
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun ReportItemScreenPreview() {
@@ -316,11 +349,13 @@ private fun ReportItemErrorsPreview() {
             name = "Black Headphones",
             category = "",
             location = "",
+            photoUri = null,
             showErrors = true,
             onTypeSelect = {},
             onNameChange = {},
             onCategoryChange = {},
             onLocationChange = {},
+            onPhotoClick = {},
             onBackClick = {},
             onSubmitClick = {},
         )

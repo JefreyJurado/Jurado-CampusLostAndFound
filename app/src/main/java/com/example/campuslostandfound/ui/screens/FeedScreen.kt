@@ -36,7 +36,7 @@ import com.example.campuslostandfound.data.ItemStatus
 import com.example.campuslostandfound.data.LostItem
 import com.example.campuslostandfound.data.SampleData
 import com.example.campuslostandfound.ui.components.GrayButton
-import com.example.campuslostandfound.ui.components.ImagePlaceholder
+import com.example.campuslostandfound.ui.components.ItemPhoto
 import com.example.campuslostandfound.ui.components.ReportPostedBanner
 import com.example.campuslostandfound.ui.components.ScreenHeader
 import com.example.campuslostandfound.ui.components.StatusBadge
@@ -210,7 +210,10 @@ fun FeedItemRow(
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ImagePlaceholder(modifier = Modifier.size(Dimens.FeedImageWidth, Dimens.FeedImageHeight))
+        ItemPhoto(
+            photoUri = item.photoUri,
+            modifier = Modifier.size(Dimens.FeedImageWidth, Dimens.FeedImageHeight),
+        )
         Spacer(modifier = Modifier.width(Dimens.ScreenPadding))
         Column {
             Text(text = item.name, style = MaterialTheme.typography.titleMedium)
