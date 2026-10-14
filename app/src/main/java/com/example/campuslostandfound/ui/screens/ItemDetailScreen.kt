@@ -160,8 +160,12 @@ private fun ItemTitleSection(
 private fun ItemInfoSection(item: LostItem, modifier: Modifier = Modifier) {
     Column(modifier = modifier) {
         DetailLine(label = "Location", value = item.location)
+        DetailLine(label = "Category", value = item.category)
         DetailLine(label = "Posted", value = item.postedAt)
-        DetailLine(label = "Description", value = item.description)
+        // Reports made in the app have no description field, so skip the line rather than show it empty.
+        if (item.description.isNotBlank()) {
+            DetailLine(label = "Description", value = item.description)
+        }
     }
 }
 
@@ -189,7 +193,7 @@ fun DetailLine(
 @Composable
 private fun ItemDetailScreenPreview() {
     CampusLostAndFoundTheme {
-        ItemDetailScreen(item = SampleData.detailItem)
+        ItemDetailScreen(item = SampleData.feedItems.first())
     }
 }
 
@@ -198,7 +202,7 @@ private fun ItemDetailScreenPreview() {
 private fun ItemDetailSavedLostPreview() {
     CampusLostAndFoundTheme {
         ItemDetailContent(
-            item = SampleData.detailItem.copy(status = ItemStatus.LOST),
+            item = SampleData.feedItems.first().copy(status = ItemStatus.LOST),
             isSaved = true,
             onSaveClick = {},
         )

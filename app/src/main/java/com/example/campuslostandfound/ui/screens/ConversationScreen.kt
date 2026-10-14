@@ -218,7 +218,7 @@ private fun MessageInputBar(
 @Composable
 private fun ConversationScreenPreview() {
     CampusLostAndFoundTheme {
-        ConversationScreen(initialMessages = SampleData.conversation)
+        ConversationScreen(initialMessages = SampleData.conversationFor(itemId = 1))
     }
 }
 
