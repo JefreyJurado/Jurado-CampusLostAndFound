@@ -31,14 +31,13 @@ import com.example.campuslostandfound.ui.theme.White
 
 /**
  * Confirmation shown when leaving the Report Item screen with unsaved changes.
- * Built as a plain Card so it renders in @Preview; it will be hosted in a Dialog
- * once navigation and state are added.
+ * Built as a plain Card so it renders in @Preview; Report Item hosts it inside a Dialog.
  */
 @Composable
 fun DiscardReportDialog(
+    onKeepEditing: () -> Unit,
+    onDiscard: () -> Unit,
     modifier: Modifier = Modifier,
-    onKeepEditing: () -> Unit = {},
-    onDiscard: () -> Unit = {},
 ) {
     Card(
         modifier = modifier,
@@ -101,7 +100,7 @@ fun ReportPostedBanner(modifier: Modifier = Modifier) {
 @Composable
 private fun DiscardReportDialogPreview() {
     CampusLostAndFoundTheme {
-        DiscardReportDialog(modifier = Modifier.padding(16.dp))
+        DiscardReportDialog(onKeepEditing = {}, onDiscard = {}, modifier = Modifier.padding(16.dp))
     }
 }
 

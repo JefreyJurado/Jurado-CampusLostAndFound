@@ -178,7 +178,7 @@ fun ReportItemContent(
     Scaffold(
         modifier = modifier,
         topBar = {
-            ScreenHeader(title = "Report Item", showBackArrow = true, onBackClick = onBackClick)
+            ScreenHeader(title = "Report Item", onBackClick = onBackClick)
         },
     ) { innerPadding ->
         Column(

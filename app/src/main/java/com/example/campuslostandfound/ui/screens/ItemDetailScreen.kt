@@ -65,7 +65,7 @@ fun ItemDetailScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            ScreenHeader(title = "Item Detail", showBackArrow = true, onBackClick = onBackClick) {
+            ScreenHeader(title = "Item Detail", onBackClick = onBackClick) {
                 SaveButton(isSaved = isSaved, onClick = onSaveClick)
             }
         },

@@ -24,9 +24,9 @@ import com.example.campuslostandfound.ui.theme.Dimens
 @Composable
 fun GrayButton(
     text: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    onClick: () -> Unit = {},
 ) {
     Button(
         onClick = onClick,
@@ -51,6 +51,7 @@ private fun GrayButtonPreview() {
     CampusLostAndFoundTheme {
         GrayButton(
             text = "Submit Report",
+            onClick = {},
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
@@ -64,6 +65,7 @@ private fun GrayButtonDisabledPreview() {
     CampusLostAndFoundTheme {
         GrayButton(
             text = "Send",
+            onClick = {},
             enabled = false,
             modifier = Modifier.padding(16.dp),
         )

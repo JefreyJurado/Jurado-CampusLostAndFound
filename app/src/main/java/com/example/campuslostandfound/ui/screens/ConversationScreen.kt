@@ -104,7 +104,7 @@ fun ConversationContent(
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = { ScreenHeader(title = "Conversation", showBackArrow = true, onBackClick = onBackClick) },
+        topBar = { ScreenHeader(title = "Conversation", onBackClick = onBackClick) },
         bottomBar = {
             MessageInputBar(
                 draft = draft,

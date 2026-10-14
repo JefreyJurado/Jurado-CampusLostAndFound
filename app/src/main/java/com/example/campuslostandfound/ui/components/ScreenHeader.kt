@@ -28,14 +28,14 @@ import com.example.campuslostandfound.ui.theme.Dimens
  * Large bold screen title, optionally preceded by a back arrow and followed by [actions].
  * Used as the top bar of every screen so headers line up across the app.
  *
- * Stateless: the screen decides what happens when the back arrow is tapped.
+ * The back arrow is shown only when [onBackClick] is given, so an arrow can never appear without
+ * an action. Stateless: the screen decides what happens when it is tapped.
  */
 @Composable
 fun ScreenHeader(
     title: String,
     modifier: Modifier = Modifier,
-    showBackArrow: Boolean = false,
-    onBackClick: () -> Unit = {},
+    onBackClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
@@ -50,7 +50,7 @@ fun ScreenHeader(
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (showBackArrow) {
+        if (onBackClick != null) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
@@ -73,7 +73,7 @@ fun ScreenHeader(
 @Composable
 private fun ScreenHeaderPreview() {
     CampusLostAndFoundTheme {
-        ScreenHeader(title = "Item Detail", showBackArrow = true)
+        ScreenHeader(title = "Item Detail", onBackClick = {})
     }
 }
 
@@ -81,7 +81,7 @@ private fun ScreenHeaderPreview() {
 @Composable
 private fun ScreenHeaderWithActionPreview() {
     CampusLostAndFoundTheme {
-        ScreenHeader(title = "Item Detail", showBackArrow = true) {
+        ScreenHeader(title = "Item Detail", onBackClick = {}) {
             IconButton(onClick = {}) {
                 Icon(imageVector = Icons.Filled.FavoriteBorder, contentDescription = "Save item")
             }
