@@ -32,7 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.example.campuslostandfound.data.ItemStatus
 import com.example.campuslostandfound.data.LostItem
 import com.example.campuslostandfound.data.SampleData
 import com.example.campuslostandfound.ui.components.EmptyState
@@ -50,8 +49,8 @@ import kotlinx.coroutines.delay
  * Feed — stateful entry point and the app's launch screen.
  *
  * State:
- *  - selectedFilter → null means "All", otherwise only items with that status are shown.
- *    The visible list is derived from it, so there is no second copy of the items in state.
+ *  - selectedFilter → which [FeedFilter] chip is on. The visible list is derived from it and
+ *    [savedItemIds], so there is no second copy of the items in state.
  *    rememberSaveable keeps the filter when the user returns from another screen or rotates.
  *
  * [showPostedBanner] is raised by the app after a report is submitted; the banner hides itself
@@ -60,19 +59,16 @@ import kotlinx.coroutines.delay
 @Composable
 fun FeedScreen(
     items: List<LostItem>,
+    savedItemIds: Set<Int>,
     showPostedBanner: Boolean,
     onPostedBannerTimeout: () -> Unit,
     onItemClick: (itemId: Int) -> Unit,
     onReportClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedFilter by rememberSaveable { mutableStateOf<ItemStatus?>(null) }
+    var selectedFilter by rememberSaveable { mutableStateOf(FeedFilter.ALL) }
 
-    val visibleItems = if (selectedFilter == null) {
-        items
-    } else {
-        items.filter { it.status == selectedFilter }
-    }
+    val visibleItems = items.filter { selectedFilter.matches(it, savedItemIds) }
 
     // A timer only: it hides the banner, it never navigates. `finally` also clears the banner
     // if the user leaves the Feed early, so it does not reappear when they come back.
@@ -104,9 +100,9 @@ fun FeedScreen(
  * Scaffold
  *  ├─ topBar: Column
  *  │    ├─ ScreenHeader("Feed")
- *  │    └─ FeedFilterRow (All | Lost | Found)
+ *  │    └─ FeedFilterRow (All | Lost | Found | Saved)
  *  ├─ content: Box
- *  │    ├─ EmptyFeed  (when items is empty)
+ *  │    ├─ EmptyState  (when items is empty)
  *  │    │  LazyColumn of FeedItemRow  (otherwise)
  *  │    └─ ReportPostedBanner (only while showPostedBanner is true)
  *  └─ bottomBar: ReportItemBar
@@ -114,9 +110,9 @@ fun FeedScreen(
 @Composable
 fun FeedContent(
     items: List<LostItem>,
-    selectedFilter: ItemStatus?,
+    selectedFilter: FeedFilter,
     showPostedBanner: Boolean,
-    onFilterSelect: (ItemStatus?) -> Unit,
+    onFilterSelect: (FeedFilter) -> Unit,
     onItemClick: (itemId: Int) -> Unit,
     onReportClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -137,7 +133,7 @@ fun FeedContent(
                 .padding(innerPadding),
         ) {
             if (items.isEmpty()) {
-                EmptyFeed(selectedFilter = selectedFilter)
+                EmptyState(message = selectedFilter.emptyMessage)
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
@@ -171,24 +167,21 @@ fun FeedContent(
  */
 @Composable
 fun FeedFilterRow(
-    selected: ItemStatus?,
-    onSelect: (ItemStatus?) -> Unit,
+    selected: FeedFilter,
+    onSelect: (FeedFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // null represents the "All" option.
-    val options = listOf<ItemStatus?>(null) + ItemStatus.entries
-
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = Dimens.ScreenPadding),
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingSmall),
     ) {
-        options.forEach { option ->
+        FeedFilter.entries.forEach { option ->
             FilterChip(
                 selected = option == selected,
                 onClick = { onSelect(option) },
-                label = { Text(text = option?.label ?: "All") },
+                label = { Text(text = option.label) },
                 colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SelectedGray),
             )
         }
@@ -227,22 +220,6 @@ fun FeedItemRow(
 }
 
 /**
- * Shown in place of the list when there are no items for the current filter.
- */
-@Composable
-private fun EmptyFeed(
-    selectedFilter: ItemStatus?,
-    modifier: Modifier = Modifier,
-) {
-    val message = if (selectedFilter == null) {
-        "No items reported yet."
-    } else {
-        "No ${selectedFilter.label.lowercase()} items reported yet."
-    }
-    EmptyState(message = message, modifier = modifier)
-}
-
-/**
  * Bottom area holding the "Report Item" button, aligned to the end like the prototype.
  */
 @Composable
@@ -268,6 +245,7 @@ private fun FeedScreenPreview() {
     CampusLostAndFoundTheme {
         FeedScreen(
             items = SampleData.feedItems,
+            savedItemIds = emptySet(),
             showPostedBanner = false,
             onPostedBannerTimeout = {},
             onItemClick = {},
@@ -282,6 +260,7 @@ private fun FeedEmptyPreview() {
     CampusLostAndFoundTheme {
         FeedScreen(
             items = emptyList(),
+            savedItemIds = emptySet(),
             showPostedBanner = false,
             onPostedBannerTimeout = {},
             onItemClick = {},
@@ -296,7 +275,7 @@ private fun FeedReportPostedPreview() {
     CampusLostAndFoundTheme {
         FeedContent(
             items = SampleData.feedItems,
-            selectedFilter = null,
+            selectedFilter = FeedFilter.ALL,
             showPostedBanner = true,
             onFilterSelect = {},
             onItemClick = {},

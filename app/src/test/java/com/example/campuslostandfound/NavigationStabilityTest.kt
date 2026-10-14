@@ -193,6 +193,22 @@ class NavigationStabilityTest {
     }
 
     @Test
+    fun savedChip_showsOnlySavedItems() {
+        rule.onNode(hasText("Saved") and isSelectable()).performClick()
+        rule.onNodeWithText("No saved items yet.\nTap the heart on an item to save it here.").assertIsDisplayed()
+        rule.onNode(hasText("All") and isSelectable()).performClick()
+
+        rule.onAllNodesWithText("Denim Jacket").onFirst().performClick()
+        rule.onNodeWithContentDescription("Save item").performClick()
+        back()
+        rule.onNode(hasText("Saved") and isSelectable()).performClick()
+
+        assertEquals(1, count("Denim Jacket"))
+        assertEquals(0, count("Black Headphones"))
+        assertEquals(0, count("Blue Water Bottle"))
+    }
+
+    @Test
     fun sentMessage_survivesReEntry() {
         rule.onAllNodesWithText("Black Headphones").onFirst().performClick()
         rule.onNodeWithText("Message finder").performClick()

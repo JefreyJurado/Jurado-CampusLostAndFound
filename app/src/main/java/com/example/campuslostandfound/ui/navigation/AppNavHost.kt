@@ -42,6 +42,7 @@ fun AppNavHost(
         composable(Routes.FEED) { entry ->
             FeedScreen(
                 items = appState.items,
+                savedItemIds = appState.savedItemIds,
                 showPostedBanner = appState.reportJustPosted,
                 onPostedBannerTimeout = appState::dismissPostedBanner,
                 onItemClick = { itemId -> navController.navigateFrom(entry, Routes.itemDetail(itemId)) },
