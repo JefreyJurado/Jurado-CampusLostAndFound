@@ -21,6 +21,7 @@ data class LostItem(
 ) : Serializable
 
 data class ChatMessage(
+    val itemId: Int,
     val text: String,
     val isFromMe: Boolean,
 ) : Serializable
@@ -69,12 +70,9 @@ object SampleData {
         ),
     )
 
-    /** Starting messages for an item's conversation; items nobody has messaged about start empty. */
-    fun conversationFor(itemId: Int): List<ChatMessage> = when (itemId) {
-        1 -> listOf(
-            ChatMessage("Hi, I found these near the study pods this morning.", isFromMe = false),
-            ChatMessage("That's mine, thank you so much!", isFromMe = true),
-        )
-        else -> emptyList()
-    }
+    /** Messages already exchanged before the app opens. Each belongs to one item's conversation. */
+    val messages = listOf(
+        ChatMessage(itemId = 1, text = "Hi, I found these near the study pods this morning.", isFromMe = false),
+        ChatMessage(itemId = 1, text = "That's mine, thank you so much!", isFromMe = true),
+    )
 }

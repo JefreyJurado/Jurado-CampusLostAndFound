@@ -26,9 +26,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,20 +41,23 @@ import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
 import com.example.campuslostandfound.ui.theme.Dimens
 
 /**
- * Conversation — stateful entry point. Owns the message list and the text being typed,
- * and passes them to the stateless [ConversationContent].
+ * Conversation — stateful entry point. Owns the text being typed and passes it,
+ * with the [messages] for this item, to the stateless [ConversationContent].
  *
  * State:
- *  - messages → observable list; adding to it recomposes the LazyColumn
- *  - draft    → text in the input field; also decides whether Send is enabled
+ *  - draft → text in the input field; also decides whether Send is enabled.
+ *    rememberSaveable keeps a half-typed message through rotation.
+ *
+ * The messages themselves are app-level state, so they are still there when the user leaves and comes back.
  */
 @Composable
 fun ConversationScreen(
-    initialMessages: List<ChatMessage>,
+    messages: List<ChatMessage>,
+    onSendMessage: (text: String) -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val messages = remember { mutableStateListOf<ChatMessage>().apply { addAll(initialMessages) } }
-    var draft by remember { mutableStateOf("") }
+    var draft by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
 
     // Whenever a message is added, scroll so the newest one is visible.
@@ -70,9 +72,13 @@ fun ConversationScreen(
         listState = listState,
         onDraftChange = { draft = it },
         onSendClick = {
-            messages.add(ChatMessage(text = draft.trim(), isFromMe = true))
-            draft = ""
+            // A second tap can land before Send redraws as disabled; the check stops an empty message.
+            if (draft.isNotBlank()) {
+                onSendMessage(draft.trim())
+                draft = ""
+            }
         },
+        onBackClick = onBackClick,
     )
 }
 
@@ -92,12 +98,13 @@ fun ConversationContent(
     draft: String,
     onDraftChange: (String) -> Unit,
     onSendClick: () -> Unit,
+    onBackClick: () -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
 ) {
     Scaffold(
         modifier = modifier,
-        topBar = { ScreenHeader(title = "Conversation", showBackArrow = true) },
+        topBar = { ScreenHeader(title = "Conversation", showBackArrow = true, onBackClick = onBackClick) },
         bottomBar = {
             MessageInputBar(
                 draft = draft,
@@ -213,12 +220,15 @@ private fun MessageInputBar(
     }
 }
 
-// Interactive: use the preview's "Start Interactive Mode" button to type and send messages.
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun ConversationScreenPreview() {
     CampusLostAndFoundTheme {
-        ConversationScreen(initialMessages = SampleData.conversationFor(itemId = 1))
+        ConversationScreen(
+            messages = SampleData.messages,
+            onSendMessage = {},
+            onBackClick = {},
+        )
     }
 }
 
@@ -231,6 +241,7 @@ private fun ConversationEmptyPreview() {
             draft = "",
             onDraftChange = {},
             onSendClick = {},
+            onBackClick = {},
         )
     }
 }

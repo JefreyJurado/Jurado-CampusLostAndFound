@@ -1,5 +1,6 @@
 package com.example.campuslostandfound.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,9 +22,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,11 +37,13 @@ import com.example.campuslostandfound.data.LostItem
 import com.example.campuslostandfound.data.SampleData
 import com.example.campuslostandfound.ui.components.GrayButton
 import com.example.campuslostandfound.ui.components.ImagePlaceholder
+import com.example.campuslostandfound.ui.components.ReportPostedBanner
 import com.example.campuslostandfound.ui.components.ScreenHeader
 import com.example.campuslostandfound.ui.components.StatusBadge
 import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
 import com.example.campuslostandfound.ui.theme.Dimens
 import com.example.campuslostandfound.ui.theme.SelectedGray
+import kotlinx.coroutines.delay
 
 /**
  * Feed — stateful entry point and the app's launch screen.
@@ -47,13 +51,21 @@ import com.example.campuslostandfound.ui.theme.SelectedGray
  * State:
  *  - selectedFilter → null means "All", otherwise only items with that status are shown.
  *    The visible list is derived from it, so there is no second copy of the items in state.
+ *    rememberSaveable keeps the filter when the user returns from another screen or rotates.
+ *
+ * [showPostedBanner] is raised by the app after a report is submitted; the banner hides itself
+ * two seconds later by calling [onPostedBannerTimeout].
  */
 @Composable
 fun FeedScreen(
     items: List<LostItem>,
+    showPostedBanner: Boolean,
+    onPostedBannerTimeout: () -> Unit,
+    onItemClick: (itemId: Int) -> Unit,
+    onReportClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedFilter by remember { mutableStateOf<ItemStatus?>(null) }
+    var selectedFilter by rememberSaveable { mutableStateOf<ItemStatus?>(null) }
 
     val visibleItems = if (selectedFilter == null) {
         items
@@ -61,11 +73,26 @@ fun FeedScreen(
         items.filter { it.status == selectedFilter }
     }
 
+    // A timer only: it hides the banner, it never navigates. `finally` also clears the banner
+    // if the user leaves the Feed early, so it does not reappear when they come back.
+    LaunchedEffect(showPostedBanner) {
+        if (showPostedBanner) {
+            try {
+                delay(2_000)
+            } finally {
+                onPostedBannerTimeout()
+            }
+        }
+    }
+
     FeedContent(
         modifier = modifier,
         items = visibleItems,
         selectedFilter = selectedFilter,
+        showPostedBanner = showPostedBanner,
         onFilterSelect = { selectedFilter = it },
+        onItemClick = onItemClick,
+        onReportClick = onReportClick,
     )
 }
 
@@ -77,15 +104,20 @@ fun FeedScreen(
  *  ├─ topBar: Column
  *  │    ├─ ScreenHeader("Feed")
  *  │    └─ FeedFilterRow (All | Lost | Found)
- *  ├─ content: EmptyFeed  (when items is empty)
- *  │           LazyColumn of FeedItemRow  (otherwise)
+ *  ├─ content: Box
+ *  │    ├─ EmptyFeed  (when items is empty)
+ *  │    │  LazyColumn of FeedItemRow  (otherwise)
+ *  │    └─ ReportPostedBanner (only while showPostedBanner is true)
  *  └─ bottomBar: ReportItemBar
  */
 @Composable
 fun FeedContent(
     items: List<LostItem>,
     selectedFilter: ItemStatus?,
+    showPostedBanner: Boolean,
     onFilterSelect: (ItemStatus?) -> Unit,
+    onItemClick: (itemId: Int) -> Unit,
+    onReportClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Scaffold(
@@ -96,28 +128,37 @@ fun FeedContent(
                 FeedFilterRow(selected = selectedFilter, onSelect = onFilterSelect)
             }
         },
-        bottomBar = { ReportItemBar() },
+        bottomBar = { ReportItemBar(onReportClick = onReportClick) },
     ) { innerPadding ->
-        if (items.isEmpty()) {
-            EmptyFeed(
-                selectedFilter = selectedFilter,
-                modifier = Modifier.padding(innerPadding),
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(
-                    start = Dimens.ScreenPadding,
-                    end = Dimens.ScreenPadding,
-                    top = Dimens.SpacingLarge,
-                ),
-                verticalArrangement = Arrangement.spacedBy(Dimens.SpacingXLarge),
-            ) {
-                items(items) { item ->
-                    FeedItemRow(item = item)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            if (items.isEmpty()) {
+                EmptyFeed(selectedFilter = selectedFilter)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = Dimens.ScreenPadding,
+                        end = Dimens.ScreenPadding,
+                        top = Dimens.SpacingLarge,
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.SpacingXLarge),
+                ) {
+                    items(items, key = { it.id }) { item ->
+                        FeedItemRow(item = item, onClick = { onItemClick(item.id) })
+                    }
                 }
+            }
+
+            if (showPostedBanner) {
+                ReportPostedBanner(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = Dimens.SpacingXLarge),
+                )
             }
         }
     }
@@ -155,14 +196,18 @@ fun FeedFilterRow(
 
 /**
  * One feed entry: photo on the left, name / location / status stacked on the right.
+ * Tapping anywhere on the row opens the item.
  */
 @Composable
 fun FeedItemRow(
     item: LostItem,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ImagePlaceholder(modifier = Modifier.size(Dimens.FeedImageWidth, Dimens.FeedImageHeight))
@@ -207,7 +252,10 @@ private fun EmptyFeed(
  * Bottom area holding the "Report Item" button, aligned to the end like the prototype.
  */
 @Composable
-private fun ReportItemBar(modifier: Modifier = Modifier) {
+private fun ReportItemBar(
+    onReportClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -215,7 +263,7 @@ private fun ReportItemBar(modifier: Modifier = Modifier) {
             .padding(Dimens.ScreenPadding),
         contentAlignment = Alignment.CenterEnd,
     ) {
-        GrayButton(text = "Report Item")
+        GrayButton(text = "Report Item", onClick = onReportClick)
     }
 }
 
@@ -224,7 +272,13 @@ private fun ReportItemBar(modifier: Modifier = Modifier) {
 @Composable
 private fun FeedScreenPreview() {
     CampusLostAndFoundTheme {
-        FeedScreen(items = SampleData.feedItems)
+        FeedScreen(
+            items = SampleData.feedItems,
+            showPostedBanner = false,
+            onPostedBannerTimeout = {},
+            onItemClick = {},
+            onReportClick = {},
+        )
     }
 }
 
@@ -232,7 +286,28 @@ private fun FeedScreenPreview() {
 @Composable
 private fun FeedEmptyPreview() {
     CampusLostAndFoundTheme {
-        FeedScreen(items = emptyList())
+        FeedScreen(
+            items = emptyList(),
+            showPostedBanner = false,
+            onPostedBannerTimeout = {},
+            onItemClick = {},
+            onReportClick = {},
+        )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true, name = "Report posted")
+@Composable
+private fun FeedReportPostedPreview() {
+    CampusLostAndFoundTheme {
+        FeedContent(
+            items = SampleData.feedItems,
+            selectedFilter = null,
+            showPostedBanner = true,
+            onFilterSelect = {},
+            onItemClick = {},
+            onReportClick = {},
+        )
     }
 }
 
@@ -240,6 +315,10 @@ private fun FeedEmptyPreview() {
 @Composable
 private fun FeedItemRowPreview() {
     CampusLostAndFoundTheme {
-        FeedItemRow(item = SampleData.feedItems.first(), modifier = Modifier.padding(Dimens.ScreenPadding))
+        FeedItemRow(
+            item = SampleData.feedItems.first(),
+            onClick = {},
+            modifier = Modifier.padding(Dimens.ScreenPadding),
+        )
     }
 }

@@ -17,10 +17,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -39,28 +35,8 @@ import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
 import com.example.campuslostandfound.ui.theme.Dimens
 
 /**
- * Item Detail — stateful entry point.
- *
- * State:
- *  - isSaved → whether the user bookmarked this item; drives the header icon and the "saved" note.
- */
-@Composable
-fun ItemDetailScreen(
-    item: LostItem,
-    modifier: Modifier = Modifier,
-) {
-    var isSaved by remember { mutableStateOf(false) }
-
-    ItemDetailContent(
-        modifier = modifier,
-        item = item,
-        isSaved = isSaved,
-        onSaveClick = { isSaved = !isSaved },
-    )
-}
-
-/**
- * Item Detail — stateless layout.
+ * Item Detail — stateless. Whether the item is saved is app-level state (it has to survive
+ * leaving and re-opening this screen), so it arrives as [isSaved] and changes go up through [onSaveClick].
  *
  * Hierarchy:
  * Scaffold
@@ -68,14 +44,16 @@ fun ItemDetailScreen(
  *  └─ content: Column (scrollable for long descriptions)
  *       ├─ ImagePlaceholder (large photo)
  *       ├─ ItemTitleSection (name, badge, "saved" note when isSaved)
- *       ├─ ItemInfoSection (Location, Posted, Description)
+ *       ├─ ItemInfoSection (Location, Category, Posted, Description)
  *       └─ GrayButton("Message finder" / "Message owner")
  */
 @Composable
-fun ItemDetailContent(
+fun ItemDetailScreen(
     item: LostItem,
     isSaved: Boolean,
     onSaveClick: () -> Unit,
+    onBackClick: () -> Unit,
+    onMessageClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // A found item was posted by the finder; a lost item was posted by the owner.
@@ -87,7 +65,7 @@ fun ItemDetailContent(
     Scaffold(
         modifier = modifier,
         topBar = {
-            ScreenHeader(title = "Item Detail", showBackArrow = true) {
+            ScreenHeader(title = "Item Detail", showBackArrow = true, onBackClick = onBackClick) {
                 SaveButton(isSaved = isSaved, onClick = onSaveClick)
             }
         },
@@ -109,7 +87,7 @@ fun ItemDetailContent(
             Spacer(modifier = Modifier.height(Dimens.SpacingMedium))
             ItemInfoSection(item = item)
             Spacer(modifier = Modifier.height(Dimens.SpacingMedium))
-            GrayButton(text = messageLabel, modifier = Modifier.fillMaxWidth())
+            GrayButton(text = messageLabel, onClick = onMessageClick, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -188,12 +166,17 @@ fun DetailLine(
     )
 }
 
-// Interactive: use the preview's "Start Interactive Mode" button to toggle the save icon.
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 private fun ItemDetailScreenPreview() {
     CampusLostAndFoundTheme {
-        ItemDetailScreen(item = SampleData.feedItems.first())
+        ItemDetailScreen(
+            item = SampleData.feedItems.first(),
+            isSaved = false,
+            onSaveClick = {},
+            onBackClick = {},
+            onMessageClick = {},
+        )
     }
 }
 
@@ -201,10 +184,12 @@ private fun ItemDetailScreenPreview() {
 @Composable
 private fun ItemDetailSavedLostPreview() {
     CampusLostAndFoundTheme {
-        ItemDetailContent(
+        ItemDetailScreen(
             item = SampleData.feedItems.first().copy(status = ItemStatus.LOST),
             isSaved = true,
             onSaveClick = {},
+            onBackClick = {},
+            onMessageClick = {},
         )
     }
 }

@@ -1,5 +1,6 @@
 package com.example.campuslostandfound.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,10 +20,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,54 +36,54 @@ import androidx.compose.ui.window.Dialog
 import com.example.campuslostandfound.data.ItemStatus
 import com.example.campuslostandfound.ui.components.DiscardReportDialog
 import com.example.campuslostandfound.ui.components.GrayButton
-import com.example.campuslostandfound.ui.components.ReportPostedBanner
 import com.example.campuslostandfound.ui.components.ScreenHeader
 import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
 import com.example.campuslostandfound.ui.theme.Dimens
 import com.example.campuslostandfound.ui.theme.OutlineGray
 import com.example.campuslostandfound.ui.theme.SelectedGray
-import kotlinx.coroutines.delay
+
+/**
+ * What the user filled in on the Report Item form, handed up when they submit.
+ */
+data class ReportSubmission(
+    val status: ItemStatus,
+    val name: String,
+    val category: String,
+    val location: String,
+)
 
 /**
  * Report Item — stateful entry point. Owns every piece of state for the form
  * and passes values + event callbacks down to the stateless [ReportItemContent].
  *
- * State:
+ * State (rememberSaveable, so typing survives rotation):
  *  - selectedType      → which Lost / Found segment is highlighted
  *  - name / category / location → text in each field
  *  - showErrors        → set after a submit attempt with blank fields; outlines them red
  *  - showDiscardDialog → whether the "Discard this report?" dialog is visible
- *  - showPostedBanner  → whether the "Report Posted" banner is visible
+ *
+ * Leaving: the back arrow and the system Back button behave the same. With unsaved changes they
+ * open the discard dialog; otherwise they call [onNavigateBack] straight away.
  */
 @Composable
-fun ReportItemScreen(modifier: Modifier = Modifier) {
-    var selectedType by remember { mutableStateOf(ItemStatus.LOST) }
-    var name by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
-    var showErrors by remember { mutableStateOf(false) }
-    var showDiscardDialog by remember { mutableStateOf(false) }
-    var showPostedBanner by remember { mutableStateOf(false) }
+fun ReportItemScreen(
+    onNavigateBack: () -> Unit,
+    onSubmit: (ReportSubmission) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var selectedType by rememberSaveable { mutableStateOf(ItemStatus.LOST) }
+    var name by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf("") }
+    var location by rememberSaveable { mutableStateOf("") }
+    var showErrors by rememberSaveable { mutableStateOf(false) }
+    var showDiscardDialog by rememberSaveable { mutableStateOf(false) }
 
     // Derived values — recalculated on every recomposition, so they never go out of sync.
     val hasUnsavedChanges = name.isNotBlank() || category.isNotBlank() || location.isNotBlank()
     val isFormComplete = name.isNotBlank() && category.isNotBlank() && location.isNotBlank()
 
-    fun clearForm() {
-        selectedType = ItemStatus.LOST
-        name = ""
-        category = ""
-        location = ""
-        showErrors = false
-    }
-
-    // Hide the banner automatically a couple of seconds after it appears.
-    LaunchedEffect(showPostedBanner) {
-        if (showPostedBanner) {
-            delay(2_000)
-            showPostedBanner = false
-        }
-    }
+    // Only intercept the system Back button when there is something to lose.
+    BackHandler(enabled = hasUnsavedChanges) { showDiscardDialog = true }
 
     ReportItemContent(
         modifier = modifier,
@@ -93,19 +92,23 @@ fun ReportItemScreen(modifier: Modifier = Modifier) {
         category = category,
         location = location,
         showErrors = showErrors,
-        showPostedBanner = showPostedBanner,
         onTypeSelect = { selectedType = it },
         onNameChange = { name = it },
         onCategoryChange = { category = it },
         onLocationChange = { location = it },
         onBackClick = {
-            // Only ask for confirmation when there is something to lose.
-            if (hasUnsavedChanges) showDiscardDialog = true
+            if (hasUnsavedChanges) showDiscardDialog = true else onNavigateBack()
         },
         onSubmitClick = {
             if (isFormComplete) {
-                clearForm()
-                showPostedBanner = true
+                onSubmit(
+                    ReportSubmission(
+                        status = selectedType,
+                        name = name.trim(),
+                        category = category.trim(),
+                        location = location.trim(),
+                    ),
+                )
             } else {
                 showErrors = true
             }
@@ -117,8 +120,8 @@ fun ReportItemScreen(modifier: Modifier = Modifier) {
             DiscardReportDialog(
                 onKeepEditing = { showDiscardDialog = false },
                 onDiscard = {
-                    clearForm()
                     showDiscardDialog = false
+                    onNavigateBack()
                 },
             )
         }
@@ -131,13 +134,11 @@ fun ReportItemScreen(modifier: Modifier = Modifier) {
  * Hierarchy:
  * Scaffold
  *  ├─ topBar: ScreenHeader("Report Item", back arrow)
- *  └─ content: Box
- *       ├─ Column (scrollable)
- *       │    ├─ ReportTypeToggle (Lost | Found)
- *       │    ├─ FormField × 3 (Name, Category, Location)
- *       │    ├─ PhotoPicker (dashed box)
- *       │    └─ GrayButton("Submit Report")
- *       └─ ReportPostedBanner (only while showPostedBanner is true)
+ *  └─ content: Column (scrollable)
+ *       ├─ ReportTypeToggle (Lost | Found)
+ *       ├─ FormField × 3 (Name, Category, Location)
+ *       ├─ PhotoPicker (dashed box)
+ *       └─ GrayButton("Submit Report")
  */
 @Composable
 fun ReportItemContent(
@@ -146,7 +147,6 @@ fun ReportItemContent(
     category: String,
     location: String,
     showErrors: Boolean,
-    showPostedBanner: Boolean,
     onTypeSelect: (ItemStatus) -> Unit,
     onNameChange: (String) -> Unit,
     onCategoryChange: (String) -> Unit,
@@ -161,55 +161,41 @@ fun ReportItemContent(
             ScreenHeader(title = "Report Item", showBackArrow = true, onBackClick = onBackClick)
         },
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding),
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = Dimens.ScreenPadding),
+            verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMedium),
         ) {
-            Column(
+            ReportTypeToggle(selected = selectedType, onSelect = onTypeSelect)
+            FormField(
+                label = "Name",
+                value = name,
+                onValueChange = onNameChange,
+                isError = showErrors && name.isBlank(),
+            )
+            FormField(
+                label = "Category",
+                value = category,
+                onValueChange = onCategoryChange,
+                isError = showErrors && category.isBlank(),
+            )
+            FormField(
+                label = "Location",
+                value = location,
+                onValueChange = onLocationChange,
+                isError = showErrors && location.isBlank(),
+            )
+            PhotoPicker(modifier = Modifier.padding(top = Dimens.SpacingSmall))
+            GrayButton(
+                text = "Submit Report",
+                onClick = onSubmitClick,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = Dimens.ScreenPadding),
-                verticalArrangement = Arrangement.spacedBy(Dimens.SpacingMedium),
-            ) {
-                ReportTypeToggle(selected = selectedType, onSelect = onTypeSelect)
-                FormField(
-                    label = "Name",
-                    value = name,
-                    onValueChange = onNameChange,
-                    isError = showErrors && name.isBlank(),
-                )
-                FormField(
-                    label = "Category",
-                    value = category,
-                    onValueChange = onCategoryChange,
-                    isError = showErrors && category.isBlank(),
-                )
-                FormField(
-                    label = "Location",
-                    value = location,
-                    onValueChange = onLocationChange,
-                    isError = showErrors && location.isBlank(),
-                )
-                PhotoPicker(modifier = Modifier.padding(top = Dimens.SpacingSmall))
-                GrayButton(
-                    text = "Submit Report",
-                    onClick = onSubmitClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = Dimens.SpacingSmall),
-                )
-            }
-
-            if (showPostedBanner) {
-                ReportPostedBanner(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .navigationBarsPadding()
-                        .padding(bottom = Dimens.SpacingXLarge),
-                )
-            }
+                    .fillMaxWidth()
+                    .padding(top = Dimens.SpacingSmall),
+            )
         }
     }
 }
@@ -317,7 +303,7 @@ fun PhotoPicker(modifier: Modifier = Modifier) {
 @Composable
 private fun ReportItemScreenPreview() {
     CampusLostAndFoundTheme {
-        ReportItemScreen()
+        ReportItemScreen(onNavigateBack = {}, onSubmit = {})
     }
 }
 
@@ -331,28 +317,6 @@ private fun ReportItemErrorsPreview() {
             category = "",
             location = "",
             showErrors = true,
-            showPostedBanner = false,
-            onTypeSelect = {},
-            onNameChange = {},
-            onCategoryChange = {},
-            onLocationChange = {},
-            onBackClick = {},
-            onSubmitClick = {},
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true, name = "Report posted")
-@Composable
-private fun ReportItemPostedPreview() {
-    CampusLostAndFoundTheme {
-        ReportItemContent(
-            selectedType = ItemStatus.LOST,
-            name = "",
-            category = "",
-            location = "",
-            showErrors = false,
-            showPostedBanner = true,
             onTypeSelect = {},
             onNameChange = {},
             onCategoryChange = {},
