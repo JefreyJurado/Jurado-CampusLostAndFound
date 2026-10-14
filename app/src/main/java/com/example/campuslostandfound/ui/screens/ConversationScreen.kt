@@ -74,7 +74,7 @@ fun ConversationScreen(
         onSendClick = {
             // A second tap can land before Send redraws as disabled; the check stops an empty message.
             if (draft.isNotBlank()) {
-                onSendMessage(draft.trim())
+                onSendMessage(draft)
                 draft = ""
             }
         },

@@ -1,32 +1,5 @@
 package com.example.campuslostandfound.data
 
-import java.io.Serializable
-
-enum class ItemStatus(val label: String) {
-    LOST("Lost"),
-    FOUND("Found"),
-}
-
-/**
- * One reported item. Serializable so lists of items can be kept with rememberSaveable.
- */
-data class LostItem(
-    val id: Int,
-    val name: String,
-    val category: String,
-    val location: String,
-    val status: ItemStatus,
-    val postedAt: String,
-    val description: String = "",
-    val photoUri: String? = null,
-) : Serializable
-
-data class ChatMessage(
-    val itemId: Int,
-    val text: String,
-    val isFromMe: Boolean,
-) : Serializable
-
 /**
  * Hardcoded sample data used to render the screens. There is no backend yet,
  * so new reports and messages live only in UI state.

@@ -37,6 +37,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.example.campuslostandfound.data.ItemStatus
+import com.example.campuslostandfound.data.ReportSubmission
 import com.example.campuslostandfound.ui.components.DiscardReportDialog
 import com.example.campuslostandfound.ui.components.GrayButton
 import com.example.campuslostandfound.ui.components.ItemPhoto
@@ -45,17 +46,6 @@ import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
 import com.example.campuslostandfound.ui.theme.Dimens
 import com.example.campuslostandfound.ui.theme.OutlineGray
 import com.example.campuslostandfound.ui.theme.SelectedGray
-
-/**
- * What the user filled in on the Report Item form, handed up when they submit.
- */
-data class ReportSubmission(
-    val status: ItemStatus,
-    val name: String,
-    val category: String,
-    val location: String,
-    val photoUri: String?,
-)
 
 /**
  * Report Item — stateful entry point. Owns every piece of state for the form

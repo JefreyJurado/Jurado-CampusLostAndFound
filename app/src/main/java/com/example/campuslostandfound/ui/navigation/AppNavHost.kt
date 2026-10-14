@@ -1,31 +1,21 @@
 package com.example.campuslostandfound.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.listSaver
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
-import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.navigation.NavBackStackEntry
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.campuslostandfound.data.ChatMessage
-import com.example.campuslostandfound.data.LostItem
-import com.example.campuslostandfound.data.SampleData
 import com.example.campuslostandfound.ui.screens.ConversationScreen
 import com.example.campuslostandfound.ui.screens.FeedScreen
 import com.example.campuslostandfound.ui.screens.ItemDetailScreen
 import com.example.campuslostandfound.ui.screens.ReportItemScreen
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.example.campuslostandfound.ui.state.CampusAppState
+import com.example.campuslostandfound.ui.state.rememberCampusAppState
 
 /**
  * The app's single navigation graph. All navigate / popBackStack calls live here,
@@ -34,21 +24,15 @@ import java.util.Locale
  * Flow:  Feed ─┬─> Report Item            (back / submit → Feed)
  *              └─> Item Detail ─> Conversation
  *
- * App-level state is kept here because more than one screen needs it, and it must outlive
- * any single screen. rememberSaveable keeps it through rotation.
- *  - items          → the feed; new reports are added to the top
- *  - savedItemIds   → items the user saved with the heart on Item Detail
- *  - messages       → every conversation's messages, tagged with their item id
- *  - reportJustPosted → shows the "Report Posted" banner on the Feed after a submit
+ * Data shared between screens comes from [CampusAppState]; this file only connects
+ * screen events to state changes and navigation.
  */
 @Composable
-fun AppNavHost(modifier: Modifier = Modifier) {
+fun AppNavHost(
+    modifier: Modifier = Modifier,
+    appState: CampusAppState = rememberCampusAppState(),
+) {
     val navController = rememberNavController()
-
-    val items = rememberSaveable(saver = snapshotListSaver()) { SampleData.feedItems.toMutableStateList() }
-    val messages = rememberSaveable(saver = snapshotListSaver()) { SampleData.messages.toMutableStateList() }
-    var savedItemIds by rememberSaveable { mutableStateOf(emptyList<Int>()) }
-    var reportJustPosted by rememberSaveable { mutableStateOf(false) }
 
     NavHost(
         navController = navController,
@@ -57,86 +41,57 @@ fun AppNavHost(modifier: Modifier = Modifier) {
     ) {
         composable(Routes.FEED) { entry ->
             FeedScreen(
-                items = items,
-                showPostedBanner = reportJustPosted,
-                onPostedBannerTimeout = { reportJustPosted = false },
-                onItemClick = { itemId ->
-                    entry.ifResumed { navController.navigate(Routes.itemDetail(itemId)) }
-                },
-                onReportClick = {
-                    entry.ifResumed { navController.navigate(Routes.REPORT_ITEM) }
-                },
+                items = appState.items,
+                showPostedBanner = appState.reportJustPosted,
+                onPostedBannerTimeout = appState::dismissPostedBanner,
+                onItemClick = { itemId -> navController.navigateFrom(entry, Routes.itemDetail(itemId)) },
+                onReportClick = { navController.navigateFrom(entry, Routes.REPORT_ITEM) },
             )
         }
 
         composable(Routes.REPORT_ITEM) { entry ->
             ReportItemScreen(
-                onNavigateBack = {
-                    entry.ifResumed { navController.popBackStack() }
-                },
+                onNavigateBack = { navController.popBackStackFrom(entry) },
                 onSubmit = { report ->
                     // Guarded too, so a double tap on Submit cannot post the same report twice.
                     entry.ifResumed {
-                        items.add(
-                            0,
-                            LostItem(
-                                id = (items.maxOfOrNull { it.id } ?: 0) + 1,
-                                name = report.name,
-                                category = report.category,
-                                location = report.location,
-                                status = report.status,
-                                photoUri = report.photoUri,
-                                postedAt = "Today, " + SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date()),
-                            ),
-                        )
-                        reportJustPosted = true
+                        appState.addReport(report)
                         navController.popBackStack()
                     }
                 },
             )
         }
 
-        composable(
-            route = Routes.ITEM_DETAIL,
-            arguments = listOf(navArgument(Routes.ARG_ITEM_ID) { type = NavType.IntType }),
-        ) { entry ->
-            val itemId = entry.arguments?.getInt(Routes.ARG_ITEM_ID)
+        composable(Routes.ITEM_DETAIL, arguments = itemIdArgument) { entry ->
             // Ids only ever come from items in the list, so this lookup always succeeds.
-            val item = items.firstOrNull { it.id == itemId } ?: return@composable
+            val item = appState.findItem(entry.itemId()) ?: return@composable
 
             ItemDetailScreen(
                 item = item,
-                isSaved = item.id in savedItemIds,
-                onSaveClick = {
-                    savedItemIds = if (item.id in savedItemIds) savedItemIds - item.id else savedItemIds + item.id
-                },
-                onBackClick = {
-                    entry.ifResumed { navController.popBackStack() }
-                },
-                onMessageClick = {
-                    entry.ifResumed { navController.navigate(Routes.conversation(item.id)) }
-                },
+                isSaved = appState.isSaved(item.id),
+                onSaveClick = { appState.toggleSaved(item.id) },
+                onBackClick = { navController.popBackStackFrom(entry) },
+                onMessageClick = { navController.navigateFrom(entry, Routes.conversation(item.id)) },
             )
         }
 
-        composable(
-            route = Routes.CONVERSATION,
-            arguments = listOf(navArgument(Routes.ARG_ITEM_ID) { type = NavType.IntType }),
-        ) { entry ->
-            val itemId = entry.arguments?.getInt(Routes.ARG_ITEM_ID) ?: return@composable
+        composable(Routes.CONVERSATION, arguments = itemIdArgument) { entry ->
+            val itemId = entry.itemId()
 
             ConversationScreen(
-                messages = messages.filter { it.itemId == itemId },
-                onSendMessage = { text ->
-                    messages.add(ChatMessage(itemId = itemId, text = text, isFromMe = true))
-                },
-                onBackClick = {
-                    entry.ifResumed { navController.popBackStack() }
-                },
+                messages = appState.messagesFor(itemId),
+                onSendMessage = { text -> appState.sendMessage(itemId, text) },
+                onBackClick = { navController.popBackStackFrom(entry) },
             )
         }
     }
 }
+
+/** The one argument used in this graph: the id of the item a screen shows. */
+private val itemIdArgument = listOf(navArgument(Routes.ARG_ITEM_ID) { type = NavType.IntType })
+
+private fun NavBackStackEntry.itemId(): Int =
+    requireNotNull(arguments?.getInt(Routes.ARG_ITEM_ID)) { "Route is missing ${Routes.ARG_ITEM_ID}" }
 
 /**
  * Runs [action] only while this destination is the one on screen and settled (RESUMED).
@@ -148,8 +103,10 @@ private fun NavBackStackEntry.ifResumed(action: () -> Unit) {
     if (lifecycle.currentState == Lifecycle.State.RESUMED) action()
 }
 
-/** Saves a SnapshotStateList by copying its elements (which must be saveable, e.g. Serializable). */
-private fun <T : Any> snapshotListSaver() = listSaver<SnapshotStateList<T>, T>(
-    save = { it.toList() },
-    restore = { it.toMutableStateList() },
-)
+/** Navigates to [route], ignoring the tap if [from] is no longer the settled screen. */
+private fun NavController.navigateFrom(from: NavBackStackEntry, route: String) =
+    from.ifResumed { navigate(route) }
+
+/** Goes back one screen, ignoring the tap if [from] is no longer the settled screen. */
+private fun NavController.popBackStackFrom(from: NavBackStackEntry) =
+    from.ifResumed { popBackStack() }
