@@ -15,10 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,6 +37,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.campuslostandfound.data.ItemStatus
 import com.example.campuslostandfound.data.ReportSubmission
 import com.example.campuslostandfound.ui.components.DiscardReportDialog
+import com.example.campuslostandfound.ui.components.FormField
 import com.example.campuslostandfound.ui.components.GrayButton
 import com.example.campuslostandfound.ui.components.ItemPhoto
 import com.example.campuslostandfound.ui.components.ScreenHeader
@@ -185,18 +184,21 @@ fun ReportItemContent(
                 value = name,
                 onValueChange = onNameChange,
                 isError = showErrors && name.isBlank(),
+                modifier = Modifier.fillMaxWidth(),
             )
             FormField(
                 label = "Category",
                 value = category,
                 onValueChange = onCategoryChange,
                 isError = showErrors && category.isBlank(),
+                modifier = Modifier.fillMaxWidth(),
             )
             FormField(
                 label = "Location",
                 value = location,
                 onValueChange = onLocationChange,
                 isError = showErrors && location.isBlank(),
+                modifier = Modifier.fillMaxWidth(),
             )
             PhotoPicker(
                 photoUri = photoUri,
@@ -250,7 +252,7 @@ private fun ToggleSegment(
         modifier = modifier
             .height(40.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(Dimens.CornerRadius),
+        shape = MaterialTheme.shapes.small,
         color = if (isSelected) SelectedGray else MaterialTheme.colorScheme.surface,
         border = if (isSelected) null else BorderStroke(1.dp, OutlineGray),
     ) {
@@ -258,32 +260,6 @@ private fun ToggleSegment(
             Text(text = label, style = MaterialTheme.typography.titleLarge)
         }
     }
-}
-
-/**
- * Outlined single-line text field with a placeholder label.
- * Stateless: shows [value] and reports edits through [onValueChange]. [isError] outlines it red.
- */
-@Composable
-fun FormField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    isError: Boolean = false,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(Dimens.FieldHeight),
-        placeholder = { Text(text = label, style = MaterialTheme.typography.bodyMedium) },
-        textStyle = MaterialTheme.typography.bodyMedium,
-        singleLine = true,
-        isError = isError,
-        shape = RoundedCornerShape(Dimens.CornerRadius),
-    )
 }
 
 /**

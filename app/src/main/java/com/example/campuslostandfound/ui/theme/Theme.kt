@@ -23,6 +23,7 @@ fun CampusLostAndFoundTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = LightColors,
         typography = Typography,
+        shapes = AppShapes,
         content = content,
     )
 }

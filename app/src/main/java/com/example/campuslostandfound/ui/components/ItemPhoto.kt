@@ -3,7 +3,6 @@ package com.example.campuslostandfound.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -24,7 +23,7 @@ fun ItemPhoto(
     photoUri: String?,
     modifier: Modifier = Modifier,
 ) {
-    val shape = RoundedCornerShape(Dimens.CornerRadius)
+    val shape = MaterialTheme.shapes.small
     val placeholderColor = MaterialTheme.colorScheme.surfaceVariant
 
     if (photoUri == null) {

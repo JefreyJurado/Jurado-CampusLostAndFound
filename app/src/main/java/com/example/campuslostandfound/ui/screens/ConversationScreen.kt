@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -17,9 +16,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,6 +32,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.campuslostandfound.data.ChatMessage
 import com.example.campuslostandfound.data.SampleData
+import com.example.campuslostandfound.ui.components.EmptyState
+import com.example.campuslostandfound.ui.components.FormField
 import com.example.campuslostandfound.ui.components.GrayButton
 import com.example.campuslostandfound.ui.components.ScreenHeader
 import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
@@ -88,7 +87,7 @@ fun ConversationScreen(
  * Hierarchy:
  * Scaffold
  *  ├─ topBar: ScreenHeader("Conversation", back arrow)
- *  ├─ content: EmptyConversation  (when messages is empty)
+ *  ├─ content: EmptyState  (when messages is empty)
  *  │           LazyColumn of MessageBubble  (otherwise)
  *  └─ bottomBar: MessageInputBar (text field + Send)
  */
@@ -114,7 +113,10 @@ fun ConversationContent(
         },
     ) { innerPadding ->
         if (messages.isEmpty()) {
-            EmptyConversation(modifier = Modifier.padding(innerPadding))
+            EmptyState(
+                message = "No messages yet.\nSay hi to start the conversation.",
+                modifier = Modifier.padding(innerPadding),
+            )
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -147,7 +149,7 @@ fun MessageBubble(
     ) {
         Surface(
             modifier = Modifier.widthIn(max = 250.dp),
-            shape = RoundedCornerShape(Dimens.CornerRadius),
+            shape = MaterialTheme.shapes.small,
             color = if (message.isFromMe) {
                 MaterialTheme.colorScheme.secondary
             } else {
@@ -160,23 +162,6 @@ fun MessageBubble(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-    }
-}
-
-/**
- * Shown in place of the message list when no messages have been sent yet.
- */
-@Composable
-private fun EmptyConversation(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = "No messages yet.\nSay hi to start the conversation.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.outline,
-        )
     }
 }
 
@@ -199,16 +184,11 @@ private fun MessageInputBar(
             .padding(Dimens.ScreenPadding),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        OutlinedTextField(
+        FormField(
+            label = "Type a message",
             value = draft,
             onValueChange = onDraftChange,
-            modifier = Modifier
-                .weight(1f)
-                .height(Dimens.FieldHeight),
-            placeholder = { Text(text = "Type a message", style = MaterialTheme.typography.bodyMedium) },
-            textStyle = MaterialTheme.typography.bodyMedium,
-            singleLine = true,
-            shape = RoundedCornerShape(Dimens.CornerRadius),
+            modifier = Modifier.weight(1f),
         )
         Spacer(modifier = Modifier.width(Dimens.SpacingMedium))
         GrayButton(

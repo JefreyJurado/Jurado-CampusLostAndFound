@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -41,7 +40,7 @@ fun DiscardReportDialog(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         colors = CardDefaults.cardColors(containerColor = White),
     ) {
         Column(
@@ -56,7 +55,7 @@ fun DiscardReportDialog(
                 OutlinedButton(
                     onClick = onKeepEditing,
                     modifier = Modifier.height(Dimens.ButtonHeight),
-                    shape = RoundedCornerShape(Dimens.CornerRadius),
+                    shape = MaterialTheme.shapes.small,
                     border = BorderStroke(1.dp, Black),
                 ) {
                     Text(text = "Keep Editing", style = MaterialTheme.typography.labelLarge, color = Black)
@@ -66,7 +65,7 @@ fun DiscardReportDialog(
                     modifier = Modifier
                         .height(Dimens.ButtonHeight)
                         .width(110.dp),
-                    shape = RoundedCornerShape(Dimens.CornerRadius),
+                    shape = MaterialTheme.shapes.small,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 ) {
                     Text(text = "Discard", style = MaterialTheme.typography.labelLarge, color = White)
@@ -84,7 +83,7 @@ fun ReportPostedBanner(modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
         color = FoundGreen,
-        shape = RoundedCornerShape(Dimens.CornerRadius),
+        shape = MaterialTheme.shapes.small,
     ) {
         Text(
             text = "Report Posted",

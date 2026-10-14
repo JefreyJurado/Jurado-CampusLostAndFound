@@ -29,12 +29,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.campuslostandfound.data.ItemStatus
 import com.example.campuslostandfound.data.LostItem
 import com.example.campuslostandfound.data.SampleData
+import com.example.campuslostandfound.ui.components.EmptyState
 import com.example.campuslostandfound.ui.components.GrayButton
 import com.example.campuslostandfound.ui.components.ItemPhoto
 import com.example.campuslostandfound.ui.components.ReportPostedBanner
@@ -238,17 +238,7 @@ private fun EmptyFeed(
     } else {
         "No ${selectedFilter.label.lowercase()} items reported yet."
     }
-    Box(
-        modifier = modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.outline,
-            textAlign = TextAlign.Center,
-        )
-    }
+    EmptyState(message = message, modifier = modifier)
 }
 
 /**
