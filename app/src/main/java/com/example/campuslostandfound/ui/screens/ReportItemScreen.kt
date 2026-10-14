@@ -15,7 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -31,6 +37,8 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -102,6 +110,7 @@ fun ReportItemScreen(
         onPhotoClick = {
             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
         },
+        onRemovePhoto = { photoUri = null },
         onBackClick = {
             if (hasUnsavedChanges) showDiscardDialog = true else onNavigateBack()
         },
@@ -160,6 +169,7 @@ fun ReportItemContent(
     onCategoryChange: (String) -> Unit,
     onLocationChange: (String) -> Unit,
     onPhotoClick: () -> Unit,
+    onRemovePhoto: () -> Unit,
     onBackClick: () -> Unit,
     onSubmitClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -183,26 +193,39 @@ fun ReportItemContent(
                 label = "Name",
                 value = name,
                 onValueChange = onNameChange,
-                isError = showErrors && name.isBlank(),
+                errorMessage = if (showErrors && name.isBlank()) "Enter the item's name" else null,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = ImeAction.Next,
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
             FormField(
                 label = "Category",
                 value = category,
                 onValueChange = onCategoryChange,
-                isError = showErrors && category.isBlank(),
+                errorMessage = if (showErrors && category.isBlank()) "Enter a category" else null,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Next,
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
             FormField(
                 label = "Location",
                 value = location,
                 onValueChange = onLocationChange,
-                isError = showErrors && location.isBlank(),
+                errorMessage = if (showErrors && location.isBlank()) "Enter where it was lost or found" else null,
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                    imeAction = ImeAction.Done,
+                ),
                 modifier = Modifier.fillMaxWidth(),
             )
             PhotoPicker(
                 photoUri = photoUri,
                 onClick = onPhotoClick,
+                onRemove = onRemovePhoto,
                 modifier = Modifier.padding(top = Dimens.SpacingSmall),
             )
             GrayButton(
@@ -264,12 +287,13 @@ private fun ToggleSegment(
 
 /**
  * Dashed drop-zone prompting the user to add an optional photo. Once a photo is chosen it fills
- * the box; tapping again picks a different one.
+ * the box; tapping again picks a different one, and the X in the corner removes it.
  */
 @Composable
 fun PhotoPicker(
     photoUri: String?,
     onClick: () -> Unit,
+    onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val boxModifier = modifier
@@ -278,7 +302,18 @@ fun PhotoPicker(
         .clickable(onClickLabel = "Choose a photo", onClick = onClick)
 
     if (photoUri != null) {
-        ItemPhoto(photoUri = photoUri, modifier = boxModifier)
+        Box(modifier = boxModifier) {
+            ItemPhoto(photoUri = photoUri, modifier = Modifier.fillMaxSize())
+            IconButton(
+                onClick = onRemove,
+                modifier = Modifier.align(Alignment.TopEnd),
+                colors = IconButtonDefaults.iconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                ),
+            ) {
+                Icon(imageVector = Icons.Filled.Close, contentDescription = "Remove photo")
+            }
+        }
     } else {
         Box(
             modifier = boxModifier.drawBehind {
@@ -322,6 +357,7 @@ private fun ReportItemErrorsPreview() {
             onCategoryChange = {},
             onLocationChange = {},
             onPhotoClick = {},
+            onRemovePhoto = {},
             onBackClick = {},
             onSubmitClick = {},
         )

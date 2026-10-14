@@ -29,6 +29,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.campuslostandfound.data.ItemStatus
@@ -207,7 +208,7 @@ fun FeedItemRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClickLabel = "Open details", role = Role.Button, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ItemPhoto(

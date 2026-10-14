@@ -19,6 +19,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.campuslostandfound.ui.theme.CampusLostAndFoundTheme
@@ -56,13 +59,15 @@ fun ScreenHeader(
                 contentDescription = "Back",
                 modifier = Modifier
                     .size(32.dp)
-                    .clickable(onClick = onBackClick),
+                    .clickable(role = Role.Button, onClick = onBackClick),
             )
             Spacer(modifier = Modifier.width(Dimens.SpacingSmall))
         }
         Text(
             text = title,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .semantics { heading() },
             style = MaterialTheme.typography.headlineMedium,
         )
         actions()

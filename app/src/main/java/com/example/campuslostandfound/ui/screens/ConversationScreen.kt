@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -28,6 +30,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.campuslostandfound.data.ChatMessage
@@ -188,6 +192,11 @@ private fun MessageInputBar(
             label = "Type a message",
             value = draft,
             onValueChange = onDraftChange,
+            keyboardOptions = KeyboardOptions(
+                capitalization = KeyboardCapitalization.Sentences,
+                imeAction = ImeAction.Send,
+            ),
+            keyboardActions = KeyboardActions(onSend = { onSendClick() }),
             modifier = Modifier.weight(1f),
         )
         Spacer(modifier = Modifier.width(Dimens.SpacingMedium))

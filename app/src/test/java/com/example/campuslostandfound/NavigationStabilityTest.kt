@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -115,11 +116,32 @@ class NavigationStabilityTest {
     }
 
     @Test
-    fun submitIncomplete_showsErrorsAndStays() {
+    fun submitIncomplete_explainsMissingFieldsAndStays() {
         rule.onNodeWithText("Report Item").performClick()
+        rule.onNodeWithText("Name").performTextInput("Umbrella")
         rule.onNodeWithText("Submit Report").performClick()
         rule.waitForIdle()
         rule.onNodeWithText("Submit Report").assertIsDisplayed()
+        // Errors are spelled out, and only for the fields still empty.
+        assertEquals(0, count("Enter the item's name"))
+        rule.onNodeWithText("Enter a category").assertIsDisplayed()
+        rule.onNodeWithText("Enter where it was lost or found").assertIsDisplayed()
+        // Filling a field clears its error straight away.
+        rule.onNodeWithText("Category").performTextInput("Personal item")
+        assertEquals(0, count("Enter a category"))
+    }
+
+    @Test
+    fun keyboardSendKey_sendsMessage() {
+        rule.onAllNodesWithText("Denim Jacket").onFirst().performClick()
+        rule.onNodeWithText("Message owner").performClick()
+        rule.onNodeWithText("Type a message").performTextInput("Found it near the gym")
+        rule.onNodeWithText("Found it near the gym").performImeAction()
+        rule.waitForIdle()
+        // Sent: the box is empty again (placeholder back), and the text is now a message.
+        rule.onNodeWithText("Type a message").assertIsDisplayed()
+        assertEquals(1, count("Found it near the gym"))
+        assertEquals(0, count("No messages yet.\nSay hi to start the conversation."))
     }
 
     @Test
