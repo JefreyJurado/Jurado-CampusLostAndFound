@@ -3,12 +3,10 @@ package com.example.campuslostandfound.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FavoriteBorder
@@ -16,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,7 +45,7 @@ fun ScreenHeader(
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(
-                start = Dimens.ScreenPadding,
+                start = if (onBackClick != null) Dimens.ScreenPadding - Dimens.SpacingSmall else Dimens.ScreenPadding,
                 end = Dimens.ScreenPadding,
                 top = Dimens.SpacingXLarge,
                 bottom = Dimens.SpacingLarge,
@@ -54,14 +53,17 @@ fun ScreenHeader(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBackClick != null) {
+            // The arrow is drawn at 32dp like the prototype, but the tap area is the 48dp minimum.
+            // The extra 8dp on each side replaces the start padding trimmed above and the gap
+            // before the title, so the arrow and title sit exactly where they did before.
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Back",
                 modifier = Modifier
-                    .size(32.dp)
-                    .clickable(role = Role.Button, onClick = onBackClick),
+                    .clickable(role = Role.Button, onClick = onBackClick)
+                    .minimumInteractiveComponentSize()
+                    .size(32.dp),
             )
-            Spacer(modifier = Modifier.width(Dimens.SpacingSmall))
         }
         Text(
             text = title,
