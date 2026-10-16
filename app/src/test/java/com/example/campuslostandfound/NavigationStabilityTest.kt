@@ -12,6 +12,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
+import com.example.campuslostandfound.data.SampleData
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -25,7 +26,8 @@ import org.robolectric.annotation.Config
  *  - rapid interaction: repeated taps open one screen, pop one screen, post one report
  *  - back stack: deep navigation unwinds in order; Report Item asks before discarding
  *  - re-entry: filter, saved items, and messages are still there after leaving and returning
- *  - rotation: the form and back stack survive the activity being recreated
+ *  - arguments: every item opens its own details and its own conversation
+ *  - rotation: the form, chat draft, new reports, filter, and back stack survive the activity being recreated
  *  - full flow: the main journey run twice gives the same result
  *
  * Rapid taps are simulated by pausing the animation clock, so every tap lands while the first
@@ -233,6 +235,62 @@ class NavigationStabilityTest {
         rule.onNodeWithText("Umbrella").assertIsDisplayed()
         back()
         rule.onNodeWithText("Discard this report?").assertIsDisplayed()
+    }
+
+    @Test
+    fun eachItem_opensItsOwnDetailAndConversation() {
+        SampleData.feedItems.forEach { item ->
+            rule.onAllNodesWithText(item.name).onFirst().performClick()
+            rule.waitForIdle()
+            // The id passed in the route picks the right item: its own location and category show.
+            rule.onNodeWithText(item.name).assertIsDisplayed()
+            rule.onNodeWithText(item.location, substring = true).assertIsDisplayed()
+            rule.onNodeWithText(item.category, substring = true).assertIsDisplayed()
+            rule.onNode(hasText("Message finder") or hasText("Message owner")).performClick()
+            rule.waitForIdle()
+            // Only item 1 has messages, so every other conversation must start empty.
+            assertEquals(if (item.id == 1) 1 else 0, count("That's mine, thank you so much!"))
+            back(); back(); onFeed()
+        }
+    }
+
+    @Test
+    fun rotation_onConversation_keepsItemMessagesAndDraft() {
+        rule.onAllNodesWithText("Black Headphones").onFirst().performClick()
+        rule.onNodeWithText("Message finder").performClick()
+        rule.onNodeWithText("Type a message").performTextInput("Is it still at the library?")
+        rule.activityRule.scenario.recreate()
+        rule.waitForIdle()
+        rule.onNodeWithText("That's mine, thank you so much!").assertIsDisplayed()
+        rule.onNodeWithText("Is it still at the library?").assertIsDisplayed()
+        back()
+        rule.onNodeWithText("Black Headphones").assertIsDisplayed()
+        back()
+        onFeed()
+    }
+
+    @Test
+    fun rotation_onFeed_keepsNewReportSavedItemAndFilter() {
+        rule.onNodeWithText("Report Item").performClick()
+        rule.onNodeWithText("Name").performTextInput("Umbrella")
+        rule.onNodeWithText("Category").performTextInput("Personal item")
+        rule.onNodeWithText("Location").performTextInput("Gym")
+        rule.onNodeWithText("Submit Report").performClick()
+        rule.waitForIdle()
+        rule.onAllNodesWithText("Blue Water Bottle").onFirst().performClick()
+        rule.onNodeWithContentDescription("Save item").performClick()
+        back()
+        rule.onNode(hasText("Lost") and isSelectable()).performClick()
+
+        rule.activityRule.scenario.recreate()
+        rule.waitForIdle()
+
+        rule.onNode(hasText("Lost") and isSelectable()).assertIsSelected()
+        assertEquals(1, count("Umbrella"))
+        assertEquals(0, count("Black Headphones"))
+        rule.onNode(hasText("Saved") and isSelectable()).performClick()
+        assertEquals(1, count("Blue Water Bottle"))
+        assertEquals(0, count("Umbrella"))
     }
 
     @Test
