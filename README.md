@@ -38,7 +38,8 @@ Feed ─┬─> Report Item      back / Discard / Submit → Feed
 | Spelled-out form errors | Empty required fields say what is missing ("Enter a category"), not just turn red, and the error clears as soon as the field is filled |
 | Discard confirmation on back | Both the back arrow and the system Back button ask before throwing away a filled-in form |
 | Keyboard actions | Next / Done move through the report form; the keyboard's Send key sends a message |
-| Screen reader support | Screen titles are headings; rows, the back arrow, and the photo box announce what tapping them does; field errors are read out |
+| Screen reader support | Screen titles are headings; rows, the back arrow, and the photo box announce what tapping them does; the Lost/Found toggle is read as a two-option choice with the selected one; field errors are read out |
+| Comfortable tap targets | The back arrow keeps its prototype size but responds to a 48dp area, the Android minimum |
 | State that survives | Filters, form text, saved items, and messages survive leaving a screen, returning, and rotating |
 
 ## Design approach
@@ -84,8 +85,9 @@ Run all tests from the project folder (no emulator needed):
 
 - **`NavigationStabilityTest`** runs the Week 9 stability protocol against the real app with
   Robolectric: rapid taps on rows, back arrows, Submit, and Send; back-stack order three screens
-  deep; the discard dialog; filters, saved items, and messages surviving re-entry; rotation; and
-  the full flow twice in a row.
+  deep; each item opening its own details and conversation (the item id argument); the discard
+  dialog; filters, saved items, and messages surviving re-entry; rotation on the Feed, Report Item,
+  and Conversation; and the full flow twice in a row.
 - **`CampusAppStateTest`** checks the app-state logic: new report ids, the posted banner flag,
   saving and unsaving, and sending messages (including ignoring blank ones).
 - **`FeedFilterTest`** checks which items each Feed chip keeps.
