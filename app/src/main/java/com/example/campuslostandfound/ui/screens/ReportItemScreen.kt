@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,6 +39,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.tooling.preview.Preview
@@ -250,7 +253,9 @@ fun ReportTypeToggle(
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(Dimens.SpacingMedium),
     ) {
         ItemStatus.entries.forEach { status ->
@@ -274,7 +279,8 @@ private fun ToggleSegment(
     Surface(
         modifier = modifier
             .height(40.dp)
-            .clickable(onClick = onClick),
+            // Read out as one of two radio options, with which one is selected.
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = onClick),
         shape = MaterialTheme.shapes.small,
         color = if (isSelected) SelectedGray else MaterialTheme.colorScheme.surface,
         border = if (isSelected) null else BorderStroke(1.dp, OutlineGray),
